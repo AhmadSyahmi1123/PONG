@@ -13,22 +13,21 @@ screen = pygame.display.set_mode((screen_width,screen_height))
 pygame.display.set_caption('Pong')
 
 # Global Variables
-bg_color = pygame.Color('#2F373F')
-text_color = (255,255,255)
-main_menu = (27,35,43)
-accent_color = (27,35,43)
+bg_color = pygame.Color('#000000FF')
+accent_color = pygame.Color('#FFFFFFFF')
 pygame.font.init()
+screen = pygame.display.get_surface()
+
 basic_font = pygame.font.Font('FreeSans\FreeSansBold.ttf', 32)
-title_font = pygame.font.Font('FreeSans\FreeSansBold.ttf', 100)
-title_text = title_font.render('PONG', True, text_color)
-textRect = title_text.get_rect()
-textRect.center = (320, 160)
+title_img = pygame.image.load('Assets\PONGtitle.png')
+title_img_rect = title_img.get_rect()
+title_img_rect.center = (320, 160)
 plob_sound = pygame.mixer.Sound("Assets\pong.wav")
 score_sound = pygame.mixer.Sound("Assets\score.wav")
 middle_strip = pygame.Rect(screen_width/2 - 2,0,4,screen_height)
 multiplayer_img = pygame.image.load('Assets\multiplayer.png')
 singleplayer_img =pygame.image.load('Assets\singleplayer.png')
-start_game = False
+start_game = True
 
 class Block(pygame.sprite.Sprite):
 	def __init__(self,path,x_pos,y_pos):
@@ -37,22 +36,6 @@ class Block(pygame.sprite.Sprite):
 		self.rect = self.image.get_rect(center = (x_pos,y_pos))
 
 class Player(Block):
-	def __init__(self,path,x_pos,y_pos,speed):
-		super().__init__(path,x_pos,y_pos)
-		self.speed = speed
-		self.movement = 0
-
-	def screen_constrain(self):
-		if self.rect.top <= 0:
-			self.rect.top = 0
-		if self.rect.bottom >= screen_height:
-			self.rect.bottom = screen_height
-
-	def update(self,ball_group):
-		self.rect.y += self.movement
-		self.screen_constrain()
-
-class Player2(Block):
 	def __init__(self,path,x_pos,y_pos,speed):
 		super().__init__(path,x_pos,y_pos)
 		self.speed = speed
@@ -114,15 +97,19 @@ class Ball(Block):
 
 	def restart_counter(self):
 		current_time = pygame.time.get_ticks()
-		countdown_number = 3
+		countdown_number = 5
 
 		if current_time - self.score_time <= 700:
-			countdown_number = 3
+			countdown_number = 5
 		if 700 < current_time - self.score_time <= 1400:
-			countdown_number = 2
+			countdown_number = 4
 		if 1400 < current_time - self.score_time <= 2100:
+			countdown_number = 3
+		if 2100 < current_time - self.score_time <= 2800:
+			countdown_number = 2
+		if 2800 < current_time - self.score_time <= 3500:
 			countdown_number = 1
-		if current_time - self.score_time >= 2100:
+		if current_time - self.score_time >= 3500:
 			self.active = True
 
 		time_counter = basic_font.render(str(countdown_number),True,accent_color)
@@ -134,6 +121,23 @@ class Opponent(Block):
 	def __init__(self,path,x_pos,y_pos,speed):
 		super().__init__(path,x_pos,y_pos)
 		self.speed = speed
+		self.movement = 0
+
+	def movement(self):
+		self.rect.y += self.movement
+		for event in pygame.event.get():
+			if event.type == pygame.KEYDOWN:
+				if event.key == pygame.K_w:
+					opponent.movement -= opponent.speed
+				if event.key == pygame.K_s:
+					opponent.movement += opponent.speed
+			if event.type == pygame.KEYUP:
+				if event.key == pygame.K_w:
+					opponent.movement += opponent.speed
+				if event.key == pygame.K_s:
+					opponent.movement -= opponent.speed
+					self.constrain()
+					pass
 
 	def update(self,ball_group):
 		if self.rect.top < ball_group.sprite.rect.y:
@@ -143,8 +147,10 @@ class Opponent(Block):
 		self.constrain()
 
 	def constrain(self):
-		if self.rect.top <= 0: self.rect.top = 0
-		if self.rect.bottom >= screen_height: self.rect.bottom = screen_height
+		if self.rect.top <= 0: 
+			self.rect.top = 0
+		if self.rect.bottom >= screen_height: 
+			self.rect.bottom = screen_height
 
 class GameManager:
 	def __init__(self,ball_group,paddle_group):
@@ -183,16 +189,14 @@ class GameManager:
 		screen.blit(opponent_score,opponent_score_rect)
 
 #game instances
-multiplayer_button = multiplayer.Button(320, 245, multiplayer_img, 0.4)
-singleplayer_button = multiplayer.Button(70, 250, singleplayer_img, 0.4)
+multiplayer_button = multiplayer.Button(350, 300, multiplayer_img, 0.4)
+singleplayer_button = multiplayer.Button(80, 300, singleplayer_img, 0.4)
 
 # Game objects
 player = Player('Assets\Paddle.png',screen_width - 20,screen_height/2,5)
-player2 = Player2('Assets\Paddle.png', 20,screen_width/2,5)
 opponent = Opponent('Assets\Paddle.png',20,screen_width/2,5)
 paddle_group = pygame.sprite.Group()
 paddle_group.add(player)
-paddle_group.add(player2)
 paddle_group.add(opponent)
 
 ball = Ball('Assets\Ball.png',screen_width/2,screen_height/2,4,4,paddle_group)
@@ -203,22 +207,28 @@ game_manager = GameManager(ball_sprite,paddle_group)
 
 run = True
 while run:
+	screen.fill(bg_color)
 
-	if start_game == False:
-		#draw menu
-		screen.fill(main_menu)
-		screen.blit(title_text, textRect)
-		#add button
+	if start_game == True:
+		 
+		screen.blit(title_img, title_img_rect)
+		
 		if multiplayer_button.draw(screen):
-			start_game = True
+			start_game = False
+			# Background Stuff
+			screen.fill(bg_color)
+			pygame.draw.rect(screen, accent_color,middle_strip)
 
 		if singleplayer_button.draw(screen):
-			start_game = True
+			start_game = False
+			# Background Stuff
+			screen.fill(bg_color)
+			pygame.draw.rect(screen,accent_color,middle_strip)
+							
 	else:
 		# Run the game
 		game_manager.run_game()
-		# Background Stuff
-		pygame.draw.rect(screen,accent_color,middle_strip)
+	
 	
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
