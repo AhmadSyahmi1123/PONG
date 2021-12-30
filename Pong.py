@@ -13,7 +13,7 @@ screen = pygame.display.set_mode((screen_width,screen_height))
 pygame.display.set_caption('Pong')
 
 # Global Variables
-bg_color = pygame.Color('#000000FF')
+bg_color = pygame.Color('#231F20')
 accent_color = pygame.Color('#FFFFFFFF')
 pygame.font.init()
 screen = pygame.display.get_surface()
@@ -28,6 +28,10 @@ middle_strip = pygame.Rect(screen_width/2 - 2,0,4,screen_height)
 multiplayer_img = pygame.image.load('Assets\multiplayer.png')
 singleplayer_img =pygame.image.load('Assets\singleplayer.png')
 start_game = True
+
+#game instances
+multiplayer_button = multiplayer.Button(350, 300, multiplayer_img, 0.4)
+singleplayer_button = multiplayer.Button(80, 300, singleplayer_img, 0.4)
 
 class Block(pygame.sprite.Sprite):
 	def __init__(self,path,x_pos,y_pos):
@@ -123,21 +127,6 @@ class Opponent(Block):
 		self.speed = speed
 		self.movement = 0
 
-	def movement(self):
-		self.rect.y += self.movement
-		for event in pygame.event.get():
-			if event.type == pygame.KEYDOWN:
-				if event.key == pygame.K_w:
-					opponent.movement -= opponent.speed
-				if event.key == pygame.K_s:
-					opponent.movement += opponent.speed
-			if event.type == pygame.KEYUP:
-				if event.key == pygame.K_w:
-					opponent.movement += opponent.speed
-				if event.key == pygame.K_s:
-					opponent.movement -= opponent.speed
-					self.constrain()
-					pass
 
 	def update(self,ball_group):
 		if self.rect.top < ball_group.sprite.rect.y:
@@ -151,6 +140,22 @@ class Opponent(Block):
 			self.rect.top = 0
 		if self.rect.bottom >= screen_height: 
 			self.rect.bottom = screen_height
+
+class Opponent2(Block):
+	def __init__(self,path,x_pos,y_pos,speed):
+		super().__init__(path,x_pos,y_pos)
+		self.speed = speed
+		self.movement = 0
+
+	def screen_constrain(self):
+		if self.rect.top <= 0:
+			self.rect.top = 0
+		if self.rect.bottom >= screen_height:
+			self.rect.bottom = screen_height
+
+	def update(self,ball_group):
+		self.rect.y += self.movement
+		self.screen_constrain()
 
 class GameManager:
 	def __init__(self,ball_group,paddle_group):
@@ -188,16 +193,31 @@ class GameManager:
 		screen.blit(player_score,player_score_rect)
 		screen.blit(opponent_score,opponent_score_rect)
 
-#game instances
-multiplayer_button = multiplayer.Button(350, 300, multiplayer_img, 0.4)
-singleplayer_button = multiplayer.Button(80, 300, singleplayer_img, 0.4)
+def handle_event(event):
+	for event in event:
+		if multiplayer_button.draw(screen):
+			for event in event_list:
+				if event.type == pygame.KEYDOWN:
+					if event.key == pygame.K_w:
+						opponent.movement -= opponent.speed
+					if event.key == pygame.K_s:
+						opponent.movement += opponent.speed
+				if event.type == pygame.KEYUP:
+					if event.key == pygame.K_w:
+						opponent.movement += opponent.speed
+					if event.key == pygame.K_s:
+						opponent.movement -= opponent.speed
+				
+		
 
 # Game objects
 player = Player('Assets\Paddle.png',screen_width - 20,screen_height/2,5)
 opponent = Opponent('Assets\Paddle.png',20,screen_width/2,5)
+opponent2 = Opponent2('Assets\Paddle.png',20,screen_width/2,5)
 paddle_group = pygame.sprite.Group()
 paddle_group.add(player)
 paddle_group.add(opponent)
+paddle_group.add(opponent2)
 
 ball = Ball('Assets\Ball.png',screen_width/2,screen_height/2,4,4,paddle_group)
 ball_sprite = pygame.sprite.GroupSingle()
@@ -208,6 +228,8 @@ game_manager = GameManager(ball_sprite,paddle_group)
 run = True
 while run:
 	screen.fill(bg_color)
+
+	event_list = pygame.event.get()
 
 	if start_game == True:
 		 
@@ -224,13 +246,15 @@ while run:
 			# Background Stuff
 			screen.fill(bg_color)
 			pygame.draw.rect(screen,accent_color,middle_strip)
+			# Run the game
+			game_manager.run_game()
 							
 	else:
 		# Run the game
 		game_manager.run_game()
 	
 	
-	for event in pygame.event.get():
+	for event in event_list:
 		if event.type == pygame.QUIT:
 			pygame.quit()
 			sys.exit()
@@ -244,7 +268,8 @@ while run:
 				player.movement += player.speed
 			if event.key == pygame.K_DOWN:
 				player.movement -= player.speed
-
+	
+	handle_event(event_list)
 	# Rendering
 	pygame.display.update()
 	pygame.display.flip()
